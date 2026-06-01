@@ -184,6 +184,7 @@
             };
 
             try {
+<<<<<<< HEAD
                 const response = await fetch(SCRIPT_URL, {
                     method: "POST",
                     headers: {
@@ -191,6 +192,16 @@
                     },
                     body: JSON.stringify(memberData)
                 });
+=======
+               const response = await fetch(SCRIPT_URL, {
+    method: "POST",
+    mode: "cors",
+    headers: {
+        "Content-Type": "text/plain;charset=utf-8"
+    },
+    body: JSON.stringify(memberData)
+});
+>>>>>>> 2f0d08b7128a14e2a8aa5712e8bde742718cebba
 
                 const result = await response.json();
 
@@ -211,6 +222,7 @@
             submitBtn.innerText = "Save to Google Sheets";
         });
 
+<<<<<<< HEAD
         async function loadMembers() {
             try {
                 const response = await fetch(SCRIPT_URL);
@@ -218,6 +230,30 @@
 
                 memberList.innerHTML = "";
 
+=======
+        async function loadMembers(
+            const members = await response.json();
+        )
+        console.log("Members loaded:", members);{
+           try {
+
+    console.log("Sending:", memberData);
+
+    const response = await fetch(https://script.google.com/macros/s/AKfycbwfWIX1tHkBw3oAbx523GicYoyEp4Wl7eCgnWZro_jn_fmNzaOYHUr8Zo8HNhPsP2R9Yg/exec, {
+        method: "POST",
+        mode: "cors",
+        headers: {
+            "Content-Type": "text/plain;charset=utf-8"
+        },
+        body: JSON.stringify(memberData)
+    });
+
+    const members = await response.json();
+
+console.log("Members loaded:", members);
+
+memberList.innerHTML = "";
+>>>>>>> 2f0d08b7128a14e2a8aa5712e8bde742718cebba
                 const yearGroups = [
                     "Year 1",
                     "Year 2",
@@ -228,9 +264,25 @@
 
                 yearGroups.forEach(year => {
 
+<<<<<<< HEAD
                     const students = members.filter(
                         student => student.year === year
                     );
+=======
+                   const students = members.filter(student => {
+    const memberYear = String(student.year).trim();
+
+    return (
+        memberYear === year ||
+        memberYear === year.replace("Year ", "")
+    );
+});
+    return (
+        y === year ||
+        y === year.replace("Year ", "")
+    );
+});
+>>>>>>> 2f0d08b7128a14e2a8aa5712e8bde742718cebba
 
                     if (!students.length) return;
 
@@ -322,4 +374,8 @@ ${WHATSAPP_GROUP_LINK}`
     </script>
 </body>
 
+<<<<<<< HEAD
 </html>
+=======
+</html>
+>>>>>>> 2f0d08b7128a14e2a8aa5712e8bde742718cebba
