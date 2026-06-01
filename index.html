@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -7,14 +8,23 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-        :root { --islamic-green: #065f46; --gold: #fbbf24; }
-        body { font-family: 'Outfit', sans-serif; background: #fdfdfb; }
-        .islamic-gradient { 
-            background: linear-gradient(135deg, #064e3b 0%, #059669 100%); 
-            border-bottom: 5px solid var(--gold); 
+         :root {
+            --islamic-green: #065f46;
+            --gold: #fbbf24;
+        }
+        
+        body {
+            font-family: 'Outfit', sans-serif;
+            background: #fdfdfb;
+        }
+        
+        .islamic-gradient {
+            background: linear-gradient(135deg, #064e3b 0%, #059669 100%);
+            border-bottom: 5px solid var(--gold);
         }
     </style>
 </head>
+
 <body>
 
     <header class="islamic-gradient text-white pt-10 pb-14 shadow-2xl">
@@ -26,7 +36,7 @@
 
     <main class="container mx-auto px-4 -mt-8 pb-20">
         <div class="grid lg:grid-cols-3 gap-8">
-            
+
             <section class="lg:col-span-1">
                 <div class="bg-white rounded-2xl shadow-xl overflow-hidden border-t-4 border-yellow-400 sticky top-8">
                     <form id="memberForm" class="p-6 space-y-4">
@@ -34,7 +44,7 @@
                         <input type="hidden" id="editId">
 
                         <input type="text" id="name" placeholder="Full Name" required class="w-full border p-3 rounded-xl bg-gray-50 outline-emerald-500">
-                        
+
                         <select id="school" required class="w-full border p-3 rounded-xl bg-white outline-emerald-500">
                             <option value="">-- Select School --</option>
                             <option>School of Agriculture and Food Science</option>
@@ -48,7 +58,7 @@
                         </select>
 
                         <input type="text" id="course" placeholder="Course" required class="w-full border p-3 rounded-xl bg-gray-50 outline-emerald-500">
-                        
+
                         <div class="grid grid-cols-2 gap-2">
                             <input type="text" id="regNo" placeholder="Reg No" required class="border p-3 rounded-xl bg-gray-50 outline-emerald-500">
                             <select id="year" class="border p-3 rounded-xl bg-white outline-emerald-500">
@@ -59,12 +69,12 @@
                                 <option>Alumni</option>
                             </select>
                         </div>
-                        
+
                         <input type="tel" id="phone" placeholder="Phone Number" required class="w-full border p-3 rounded-xl bg-gray-50 outline-emerald-500">
-                        
+
                         <div class="flex flex-col gap-2">
                             <button type="submit" id="submitBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg">
-                                Save to Cloud
+                                Save to Google Sheets
                             </button>
                             <button type="button" id="cancelBtn" class="hidden w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-xl transition-all">
                                 Cancel Edit
@@ -94,7 +104,7 @@
                                 </tr>
                             </thead>
                             <tbody id="memberList" class="divide-y divide-gray-100 text-sm">
-                                </tbody>
+                            </tbody>
                         </table>
                     </div>
                 </div>
@@ -114,7 +124,202 @@
             }
         }
     </script>
+    <script>
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwfWIX1tHkBw3oAbx523GicYoyEp4Wl7eCgnWZro_jn_fmNzaOYHUr8Zo8HNhPsP2R9Yg/exec";
 
+        const form = document.getElementById("memberForm");
+        const submitBtn = document.getElementById("submitBtn");
+        const memberList = document.getElementById("memberList");
 
+        const WHATSAPP_GROUP_LINK = "https://chat.whatsapp.com/YOUR_GROUP_INVITE_CODE";
+
+        function formatWhatsAppNumber(phoneStr) {
+            let cleaned = phoneStr.replace(/\D/g, '');
+            if (cleaned.startsWith('0')) {
+                cleaned = '254' + cleaned.substring(1);
+            }
+            return cleaned;
+        }
+
+        window.downloadVCard = (name, phone, year, regNo, course) => {
+            const cleanPhone = phone.replace(/\D/g, '');
+
+            const vcardContent = [
+                "BEGIN:VCARD",
+                "VERSION:3.0",
+                `N:;MAMU: ${name} (${year});;;`,
+                `FN:MAMU: ${name} (${year})`,
+                `TEL;TYPE=CELL:${cleanPhone}`,
+                `NOTE:Reg: ${regNo} | Course: ${course}`,
+                "END:VCARD"
+            ].join("\n");
+
+            const blob = new Blob([vcardContent], {
+                type: "text/vcard;charset=utf-8;"
+            });
+
+            const url = URL.createObjectURL(blob);
+
+            const link = document.createElement("a");
+            link.href = url;
+            link.download = `${name.replace(/\s+/g, "_")}_MAMU.vcf`;
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        };
+
+        form.addEventListener("submit", async(e) => {
+            e.preventDefault();
+
+            submitBtn.disabled = true;
+            submitBtn.innerText = "Saving...";
+
+            const memberData = {
+                name: document.getElementById("name").value,
+                regNo: document.getElementById("regNo").value,
+                school: document.getElementById("school").value,
+                course: document.getElementById("course").value,
+                year: document.getElementById("year").value,
+                phone: document.getElementById("phone").value
+            };
+
+            try {
+                const response = await fetch(SCRIPT_URL, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json"
+                    },
+                    body: JSON.stringify(memberData)
+                });
+
+                const result = await response.json();
+
+                if (result.status === "success") {
+                    alert("Student registered successfully.");
+                    form.reset();
+                    loadMembers();
+                } else {
+                    alert("Failed to save student.");
+                }
+
+            } catch (error) {
+                console.error(error);
+                alert("Unable to connect to Google Sheets.");
+            }
+
+            submitBtn.disabled = false;
+            submitBtn.innerText = "Save to Google Sheets";
+        });
+
+        async function loadMembers() {
+            try {
+                const response = await fetch(SCRIPT_URL);
+                const members = await response.json();
+
+                memberList.innerHTML = "";
+
+                const yearGroups = [
+                    "Year 1",
+                    "Year 2",
+                    "Year 3",
+                    "Year 4",
+                    "Alumni"
+                ];
+
+                yearGroups.forEach(year => {
+
+                    const students = members.filter(
+                        student => student.year === year
+                    );
+
+                    if (!students.length) return;
+
+                    memberList.innerHTML += `
+                <tr class="bg-emerald-50/80 border-y border-emerald-100">
+                    <td colspan="4"
+                        class="px-6 py-2 text-[11px] font-black text-emerald-800 uppercase tracking-widest">
+                        ${year}
+                        <span class="ml-2 font-medium text-emerald-400">
+                            | ${students.length}
+                        </span>
+                    </td>
+                </tr>
+            `;
+
+                    students.forEach(m => {
+
+                        const waPhone = formatWhatsAppNumber(m.phone);
+
+                        const messageText = encodeURIComponent(
+                            `Assalam Alaykum ${m.name},
+
+Welcome to MAMU.
+
+Join our WhatsApp group:
+
+${WHATSAPP_GROUP_LINK}`
+                        );
+
+                        const waUrl =
+                            `https://wa.me/${waPhone}?text=${messageText}`;
+
+                        memberList.innerHTML += `
+                    <tr class="hover:bg-gray-50">
+
+                        <td class="px-6 py-4">
+                            <div class="font-bold text-emerald-900">
+                                ${m.name}
+                            </div>
+
+                            <div class="text-[10px] text-gray-400 font-mono uppercase">
+                                ${m.regNo}
+                            </div>
+                        </td>
+
+                        <td class="px-6 py-4">
+                            <div class="text-xs font-semibold text-gray-500 uppercase">
+                                ${m.school}
+                            </div>
+
+                            <div class="text-sm text-emerald-600">
+                                ${m.course}
+                            </div>
+                        </td>
+
+                        <td class="px-6 py-4">
+                            <div class="flex gap-2">
+
+                                <button
+                                    onclick="downloadVCard('${m.name}','${m.phone}','${m.year}','${m.regNo}','${m.course}')"
+                                    class="text-[11px] font-bold bg-white border border-gray-300 px-2 py-1 rounded-lg">
+                                    Save Contact
+                                </button>
+
+                                <a href="${waUrl}"
+                                   target="_blank"
+                                   class="text-[11px] font-bold bg-emerald-600 text-white px-2 py-1 rounded-lg">
+                                    Send Invite
+                                </a>
+
+                            </div>
+                        </td>
+
+                        <td class="px-6 py-4 text-center">
+                            ${m.year}
+                        </td>
+
+                    </tr>
+                `;
+                    });
+                });
+
+            } catch (error) {
+                console.error("Load error:", error);
+            }
+        }
+
+        loadMembers();
+    </script>
 </body>
+
 </html>
