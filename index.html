@@ -74,7 +74,7 @@
 
                         <div class="flex flex-col gap-2">
                             <button type="submit" id="submitBtn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-4 rounded-xl transition-all shadow-lg">
-                                Save to Google Sheets
+                                Save to Cloud
                             </button>
                             <button type="button" id="cancelBtn" class="hidden w-full bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-3 rounded-xl transition-all">
                                 Cancel Edit
@@ -118,17 +118,41 @@
             const filter = input.value.toLowerCase();
             const table = document.getElementById("memberList");
             const tr = table.getElementsByTagName("tr");
+            
+            let currentHeader = null;
+            let visibleInGroup = 0;
+
             for (let i = 0; i < tr.length; i++) {
+                if (tr[i].hasAttribute('data-group-header')) {
+                    if (currentHeader && visibleInGroup === 0) {
+                        currentHeader.style.display = "none";
+                    }
+                    currentHeader = tr[i];
+                    visibleInGroup = 0;
+                    tr[i].style.display = ""; 
+                    continue;
+                }
+
                 const text = tr[i].textContent || tr[i].innerText;
-                tr[i].style.display = text.toLowerCase().indexOf(filter) > -1 ? "" : "none";
+                if (text.toLowerCase().indexOf(filter) > -1) {
+                    tr[i].style.display = "";
+                    visibleInGroup++;
+                } else {
+                    tr[i].style.display = "none";
+                }
+            }
+
+            if (currentHeader && visibleInGroup === 0) {
+                currentHeader.style.display = "none";
             }
         }
     </script>
     <script>
-        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwfWIX1tHkBw3oAbx523GicYoyEp4Wl7eCgnWZro_jn_fmNzaOYHUr8Zo8HNhPsP2R9Yg/exec";
-
         const form = document.getElementById("memberForm");
+        const formTitle = document.getElementById("formTitle");
         const submitBtn = document.getElementById("submitBtn");
+        const cancelBtn = document.getElementById("cancelBtn");
+        const editIdInput = document.getElementById("editId");
         const memberList = document.getElementById("memberList");
 
         const WHATSAPP_GROUP_LINK = "https://chat.whatsapp.com/YOUR_GROUP_INVITE_CODE";
@@ -168,21 +192,68 @@
             document.body.removeChild(link);
         };
 
-        form.addEventListener("submit", async(e) => {
+        window.prepareEdit = (id) => {
+            let members = JSON.parse(localStorage.getItem("mamu_members")) || [];
+            let m = members.find(student => String(student.id) === String(id));
+            
+            if (!m) return;
+
+            editIdInput.value = m.id;
+            document.getElementById("name").value = m.name;
+            document.getElementById("school").value = m.school;
+            document.getElementById("course").value = m.course;
+            document.getElementById("regNo").value = m.regNo;
+            document.getElementById("year").value = m.year;
+            document.getElementById("phone").value = m.phone;
+
+            formTitle.innerText = "Editing Record";
+            submitBtn.innerText = "Update Member";
+            cancelBtn.classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        cancelBtn.onclick = resetFormState;
+
+        function resetFormState() {
+            form.reset();
+            editIdInput.value = "";
+            formTitle.innerText = "Register Student";
+            submitBtn.innerText = "Save to Cloud";
+            cancelBtn.classList.add('hidden');
+        }
+
+        form.addEventListener("submit", (e) => {
             e.preventDefault();
 
-            submitBtn.disabled = true;
-            submitBtn.innerText = "Saving...";
+            const inputRegNo = document.getElementById("regNo").value.trim();
+            const editId = editIdInput.value;
+            
+            let members = JSON.parse(localStorage.getItem("mamu_members")) || [];
+
+            // Duplicate registration checks (only when creating a new member)
+            if (!editId) {
+                const isDuplicate = members.some(student => 
+                    String(student.regNo).trim().toLowerCase() === inputRegNo.toLowerCase()
+                );
+
+                if (isDuplicate) {
+                    alert("Registration Error: A student with this Registration Number is already registered!");
+                    return;
+                }
+            }
 
             const memberData = {
+                id: editId || Date.now().toString(), 
                 name: document.getElementById("name").value,
-                regNo: document.getElementById("regNo").value,
+                regNo: inputRegNo,
                 school: document.getElementById("school").value,
                 course: document.getElementById("course").value,
                 year: document.getElementById("year").value,
-                phone: document.getElementById("phone").value
+                phone: document.getElementById("phone").value,
+                createdAt: editId ? (members.find(m => m.id === editId)?.createdAt || Date.now()) : Date.now()
             };
 
+<<<<<<< HEAD
             console.log("Sending:", memberData);
             try {
                 const response = await fetch(SCRIPT_URL, {
@@ -207,14 +278,26 @@
             } catch (error) {
                 console.error(error);
                 alert("Unable to connect to Google Sheets.");
+=======
+            if (editId) {
+                // Update existing record
+                members = members.map(m => m.id === editId ? memberData : m);
+                alert("Student records updated successfully.");
+            } else {
+                // Add new record
+                members.push(memberData);
+                alert("Student registered successfully.");
+>>>>>>> 2121b04d7a11f153269b89d3345e18eb6e89bde7
             }
 
-            submitBtn.disabled = false;
-            submitBtn.innerText = "Save to Google Sheets";
+            localStorage.setItem("mamu_members", JSON.stringify(members));
+            resetFormState();
+            loadMembers();
         });
         async function loadMembers() {
             try {
 
+<<<<<<< HEAD
                 const response = await fetch(SCRIPT_URL);
                 const members = await response.json();
 
@@ -319,14 +402,99 @@ ${WHATSAPP_GROUP_LINK}`
                     </tr>
                 `;
                     });
+=======
+        function loadMembers() {
+            let members = JSON.parse(localStorage.getItem("mamu_members")) || [];
+
+            memberList.innerHTML = "";
+
+            const yearGroups = [
+                "Year 1",
+                "Year 2",
+                "Year 3",
+                "Year 4",
+                "Alumni"
+            ];
+
+            // Sort so that the newest registrations appear on top inside their respective groups
+            const sortedMembers = [...members].sort((a, b) => b.createdAt - a.createdAt);
+
+            yearGroups.forEach(year => {
+                const students = sortedMembers.filter(student => {
+                    const memberYear = String(student.year).trim();
+                    return (
+                        memberYear === year ||
+                        memberYear === year.replace("Year ", "")
+                    );
+>>>>>>> 2121b04d7a11f153269b89d3345e18eb6e89bde7
                 });
 
-            } catch (error) {
-                console.error("Load error:", error);
+                if (!students.length) return;
+
+                memberList.innerHTML += `
+                    <tr data-group-header="true" class="bg-emerald-50/80 border-y border-emerald-100">
+                        <td colspan="4" class="px-6 py-2 text-[11px] font-black text-emerald-800 uppercase tracking-widest">
+                            ${year}
+                            <span class="ml-2 font-medium text-emerald-400">
+                                | ${students.length} ${year === 'Alumni' ? 'Members' : 'Students'}
+                            </span>
+                        </td>
+                    </tr>
+                `;
+
+                students.forEach(m => {
+                    const waPhone = formatWhatsAppNumber(m.phone);
+                    const messageText = encodeURIComponent(`Assalam Alaykum ${m.name},\n\nWelcome to MAMU.\n\nJoin our WhatsApp group:\n\n${WHATSAPP_GROUP_LINK}`);
+                    const waUrl = `https://wa.me/${waPhone}?text=${messageText}`;
+
+                    const safeName = String(m.name).replace(/'/g, "\\'");
+                    const safePhone = String(m.phone).replace(/'/g, "\\'");
+                    const safeYear = String(m.year).replace(/'/g, "\\'");
+                    const safeRegNo = String(m.regNo).replace(/'/g, "\\'");
+                    const safeCourse = String(m.course).replace(/'/g, "\\'");
+
+                    memberList.innerHTML += `
+                        <tr class="hover:bg-gray-50">
+                            <td class="px-6 py-4">
+                                <div class="font-bold text-emerald-900">${m.name}</div>
+                                <div class="text-[10px] text-gray-400 font-mono uppercase">${m.regNo}</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="text-xs font-semibold text-gray-500 uppercase">${m.school}</div>
+                                <div class="text-sm text-emerald-600">${m.course}</div>
+                            </td>
+                            <td class="px-6 py-4">
+                                <div class="flex gap-2">
+                                    <button
+                                        onclick="downloadVCard('${safeName}','${safePhone}','${safeYear}','${safeRegNo}','${safeCourse}')"
+                                        class="text-[11px] font-bold bg-white border border-gray-300 px-2 py-1 rounded-lg">
+                                        Save Contact
+                                    </button>
+                                    <a href="${waUrl}" target="_blank" class="text-[11px] font-bold bg-emerald-600 text-white px-2 py-1 rounded-lg">
+                                        Send Invite
+                                    </a>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 text-center">
+                                <button onclick="prepareEdit('${m.id}')"
+                                        class="text-[10px] font-black tracking-tight bg-white border border-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
+                                    EDIT
+                                </button>
+                            </td>
+                        </tr>
+                    `;
+                });
+            });
+
+            // Re-apply filter rules if user currently has an active search text query typed
+            const currentSearch = document.getElementById("searchInput").value;
+            if (currentSearch.trim() !== "") {
+                filterTable();
             }
         }
 
-        loadMembers();
+        // Initialize and load local browser data instantly upon display assembly
+        window.onload = loadMembers;
     </script>
 </body>
 
