@@ -196,17 +196,31 @@
 
         window.prepareEdit = (id) => {
             let members = JSON.parse(localStorage.getItem("mamu_members")) || [];
-            let m = members.find(student => String(student.id) === String(id));
+            
+            // Integrated Lookups targeting both student.id and student.Id property structures
+            let m = members.find(student => {
+                const studentId = student.id || student.Id;
+                return String(studentId) === String(id);
+            });
             
             if (!m) return;
 
-            editIdInput.value = m.id;
-            document.getElementById("name").value = m.name;
-            document.getElementById("school").value = m.school;
-            document.getElementById("course").value = m.course;
-            document.getElementById("regNo").value = m.regNo;
-            document.getElementById("year").value = m.year;
-            document.getElementById("phone").value = m.phone;
+            // Property assignment matching key styles down to fallback fields
+            const recordId = m.id || m.Id;
+            const recordName = m.name || m.Name;
+            const recordSchool = m.school || m.School;
+            const recordCourse = m.course || m.Course;
+            const recordRegNo = m.regNo || m.RegNo || m['Reg No'];
+            const recordYear = m.year || m.Year;
+            const recordPhone = m.phone || m.Phone;
+
+            editIdInput.value = recordId;
+            document.getElementById("name").value = recordName;
+            document.getElementById("school").value = recordSchool;
+            document.getElementById("course").value = recordCourse;
+            document.getElementById("regNo").value = recordRegNo;
+            document.getElementById("year").value = recordYear;
+            document.getElementById("phone").value = recordPhone;
 
             formTitle.innerText = "Editing Record";
             submitBtn.innerText = "Update Member";
@@ -252,12 +266,12 @@
                 course: document.getElementById("course").value,
                 year: document.getElementById("year").value,
                 phone: document.getElementById("phone").value,
-                createdAt: editId ? (members.find(m => m.id === editId)?.createdAt || Date.now()) : Date.now()
+                createdAt: editId ? (members.find(m => m.id === editId || m.Id === editId)?.createdAt || Date.now()) : Date.now()
             };
 
             // Local fallback synchronization update handling immediately
             if (editId) {
-                members = members.map(m => m.id === editId ? memberData : m);
+                members = members.map(m => (m.id === editId || m.Id === editId) ? memberData : m);
             } else {
                 members.push(memberData);
             }
@@ -324,7 +338,7 @@
 
             yearGroups.forEach(year => {
                 const students = sortedMembers.filter(student => {
-                    const memberYear = String(student.year).trim();
+                    const memberYear = String(student.year || student.Year).trim();
                     return (
                         memberYear === year ||
                         memberYear === year.replace("Year ", "")
@@ -345,25 +359,33 @@
                 `;
 
                 students.forEach(m => {
-                    const waPhone = formatWhatsAppNumber(m.phone);
-                    const messageText = encodeURIComponent(`Assalam Alaykum ${m.name},\n\nWelcome to MAMU.\n\nJoin our WhatsApp group:\n\n${WHATSAPP_GROUP_LINK}`);
+                    const currentId = m.id || m.Id;
+                    const currentName = m.name || m.Name;
+                    const currentRegNo = m.regNo || m.RegNo || m['Reg No'];
+                    const currentSchool = m.school || m.School;
+                    const currentCourse = m.course || m.Course;
+                    const currentPhone = m.phone || m.Phone;
+                    const currentYear = m.year || m.Year;
+
+                    const waPhone = formatWhatsAppNumber(currentPhone);
+                    const messageText = encodeURIComponent(`Assalam Alaykum ${currentName},\n\nWelcome to MAMU.\n\nJoin our WhatsApp group:\n\n${WHATSAPP_GROUP_LINK}`);
                     const waUrl = `https://wa.me/${waPhone}?text=${messageText}`;
 
-                    const safeName = String(m.name).replace(/'/g, "\\'");
-                    const safePhone = String(m.phone).replace(/'/g, "\\'");
-                    const safeYear = String(m.year).replace(/'/g, "\\'");
-                    const safeRegNo = String(m.regNo).replace(/'/g, "\\'");
-                    const safeCourse = String(m.course).replace(/'/g, "\\'");
+                    const safeName = String(currentName).replace(/'/g, "\\'");
+                    const safePhone = String(currentPhone).replace(/'/g, "\\'");
+                    const safeYear = String(currentYear).replace(/'/g, "\\'");
+                    const safeRegNo = String(currentRegNo).replace(/'/g, "\\'");
+                    const safeCourse = String(currentCourse).replace(/'/g, "\\'");
 
                     memberList.innerHTML += `
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4">
-                                <div class="font-bold text-emerald-900">${m.name}</div>
-                                <div class="text-[10px] text-gray-400 font-mono uppercase">${m.regNo}</div>
+                                <div class="font-bold text-emerald-900">${currentName}</div>
+                                <div class="text-[10px] text-gray-400 font-mono uppercase">${currentRegNo}</div>
                             </td>
                             <td class="px-6 py-4">
-                                <div class="text-xs font-semibold text-gray-500 uppercase">${m.school}</div>
-                                <div class="text-sm text-emerald-600">${m.course}</div>
+                                <div class="text-xs font-semibold text-gray-500 uppercase">${currentSchool}</div>
+                                <div class="text-sm text-emerald-600">${currentCourse}</div>
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex gap-2">
@@ -378,7 +400,7 @@
                                 </div>
                             </td>
                             <td class="px-6 py-4 text-center">
-                                <button onclick="prepareEdit('${m.id}')"
+                                <button onclick="prepareEdit('${currentId}')"
                                         class="text-[10px] font-black tracking-tight bg-white border border-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
                                     EDIT
                                 </button>
