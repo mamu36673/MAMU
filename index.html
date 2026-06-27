@@ -155,6 +155,8 @@
         const editIdInput = document.getElementById("editId");
         const memberList = document.getElementById("memberList");
 
+        // REPLACE THIS WITH YOUR ACTUALLY DEPLOYED WEB APP URL
+        const SCRIPT_URL = "YOUR_GOOGLE_SCRIPT_WEB_APP_URL_HERE"; 
         const WHATSAPP_GROUP_LINK = "https://chat.whatsapp.com/YOUR_GROUP_INVITE_CODE";
 
         function formatWhatsAppNumber(phoneStr) {
@@ -222,7 +224,7 @@
             cancelBtn.classList.add('hidden');
         }
 
-        form.addEventListener("submit", (e) => {
+        form.addEventListener("submit", async (e) => {
             e.preventDefault();
 
             const inputRegNo = document.getElementById("regNo").value.trim();
@@ -230,7 +232,7 @@
             
             let members = JSON.parse(localStorage.getItem("mamu_members")) || [];
 
-            // Duplicate registration checks (only when creating a new member)
+            // Duplicate registration checks (only when creating a completely new member)
             if (!editId) {
                 const isDuplicate = members.some(student => 
                     String(student.regNo).trim().toLowerCase() === inputRegNo.toLowerCase()
@@ -253,158 +255,59 @@
                 createdAt: editId ? (members.find(m => m.id === editId)?.createdAt || Date.now()) : Date.now()
             };
 
-<<<<<<< HEAD
-            console.log("Sending:", memberData);
-            try {
-                const response = await fetch(SCRIPT_URL, {
-                    method: "POST",
-                    mode: "cors",
-                    headers: {
-                        "Content-Type": "text/plain;charset=utf-8"
-                    },
-                    body: JSON.stringify(memberData)
-                });
-
-                const result = await response.json();
-
-                if (result.status === "success") {
-                    alert("Student registered successfully.");
-                    form.reset();
-                    loadMembers();
-                } else {
-                    alert("Failed to save student.");
-                }
-
-            } catch (error) {
-                console.error(error);
-                alert("Unable to connect to Google Sheets.");
-=======
+            // Local fallback synchronization update handling immediately
             if (editId) {
-                // Update existing record
                 members = members.map(m => m.id === editId ? memberData : m);
-                alert("Student records updated successfully.");
             } else {
-                // Add new record
                 members.push(memberData);
-                alert("Student registered successfully.");
->>>>>>> 2121b04d7a11f153269b89d3345e18eb6e89bde7
+            }
+            localStorage.setItem("mamu_members", JSON.stringify(members));
+
+            // Remote Deployment Uploading Logic Handler
+            if(SCRIPT_URL !== "YOUR_GOOGLE_SCRIPT_WEB_APP_URL_HERE") {
+                try {
+                    submitBtn.innerText = "Processing...";
+                    const response = await fetch(SCRIPT_URL, {
+                        method: "POST",
+                        mode: "cors",
+                        headers: { "Content-Type": "text/plain;charset=utf-8" },
+                        body: JSON.stringify(memberData)
+                    });
+
+                    const result = await response.json();
+                    if (result.status === "success") {
+                        alert(editId ? "Student record updated in Cloud successfully." : "Student registered to Cloud successfully.");
+                    } else {
+                        alert("Cloud Save Error: Data captured locally but missing from external sheet.");
+                    }
+                } catch (error) {
+                    console.error("Cloud Error Log:", error);
+                    alert("Saved Locally. Unable to stream changes online directly to Google Sheets right now.");
+                }
+            } else {
+                alert(editId ? "Student records updated successfully (Local Environment Mode)." : "Student registered successfully (Local Environment Mode).");
             }
 
-            localStorage.setItem("mamu_members", JSON.stringify(members));
             resetFormState();
             loadMembers();
         });
+
         async function loadMembers() {
-            try {
-
-<<<<<<< HEAD
-                const response = await fetch(SCRIPT_URL);
-                const members = await response.json();
-
-                console.log("Members loaded:", members);
-
-                memberList.innerHTML = "";
-
-                const yearGroups = [
-                    "Year 1",
-                    "Year 2",
-                    "Year 3",
-                    "Year 4",
-                    "Alumni"
-                ];
-
-                yearGroups.forEach(year => {
-
-                    const students = members.filter(student => {
-                        const memberYear = String(student.year).trim();
-
-                        return (
-                            memberYear === year ||
-                            memberYear === year.replace("Year ", "")
-                        );
-                    });
-
-                    if (!students.length) return;
-
-                    memberList.innerHTML += `
-                <tr class="bg-emerald-50/80 border-y border-emerald-100">
-                    <td colspan="4"
-                        class="px-6 py-2 text-[11px] font-black text-emerald-800 uppercase tracking-widest">
-                        ${year}
-                        <span class="ml-2 font-medium text-emerald-400">
-                            | ${students.length}
-                        </span>
-                    </td>
-                </tr>
-            `;
-
-                    students.forEach(m => {
-
-                        const waPhone = formatWhatsAppNumber(m.phone);
-
-                        const messageText = encodeURIComponent(
-                            `Assalam Alaykum ${m.name},
-
-Welcome to MAMU.
-
-Join our WhatsApp group:
-
-${WHATSAPP_GROUP_LINK}`
-                        );
-
-                        const waUrl = `https://wa.me/${waPhone}?text=${messageText}`;
-
-                        memberList.innerHTML += `
-                    <tr class="hover:bg-gray-50">
-
-                        <td class="px-6 py-4">
-                            <div class="font-bold text-emerald-900">
-                                ${m.name}
-                            </div>
-
-                            <div class="text-[10px] text-gray-400 font-mono uppercase">
-                                ${m.regNo}
-                            </div>
-                        </td>
-
-                        <td class="px-6 py-4">
-                            <div class="text-xs font-semibold text-gray-500 uppercase">
-                                ${m.school}
-                            </div>
-
-                            <div class="text-sm text-emerald-600">
-                                ${m.course}
-                            </div>
-                        </td>
-
-                        <td class="px-6 py-4">
-                            <div class="flex gap-2">
-
-                                <button
-                                    onclick="downloadVCard('${m.name}','${m.phone}','${m.year}','${m.regNo}','${m.course}')"
-                                    class="text-[11px] font-bold bg-white border border-gray-300 px-2 py-1 rounded-lg">
-                                    Save Contact
-                                </button>
-
-                                <a href="${waUrl}"
-                                   target="_blank"
-                                   class="text-[11px] font-bold bg-emerald-600 text-white px-2 py-1 rounded-lg">
-                                    Send Invite
-                                </a>
-
-                            </div>
-                        </td>
-
-                        <td class="px-6 py-4 text-center">
-                            ${m.year}
-                        </td>
-
-                    </tr>
-                `;
-                    });
-=======
-        function loadMembers() {
-            let members = JSON.parse(localStorage.getItem("mamu_members")) || [];
+            let members = [];
+            
+            // Try fetching real-time from your Cloud script first if defined
+            if (SCRIPT_URL !== "YOUR_GOOGLE_SCRIPT_WEB_APP_URL_HERE") {
+                try {
+                    const response = await fetch(SCRIPT_URL);
+                    members = await response.json();
+                    localStorage.setItem("mamu_members", JSON.stringify(members));
+                } catch (e) {
+                    console.warn("Offline fallback activated. Loading locally stored information caches instead.");
+                    members = JSON.parse(localStorage.getItem("mamu_members")) || [];
+                }
+            } else {
+                members = JSON.parse(localStorage.getItem("mamu_members")) || [];
+            }
 
             memberList.innerHTML = "";
 
@@ -426,7 +329,6 @@ ${WHATSAPP_GROUP_LINK}`
                         memberYear === year ||
                         memberYear === year.replace("Year ", "")
                     );
->>>>>>> 2121b04d7a11f153269b89d3345e18eb6e89bde7
                 });
 
                 if (!students.length) return;
@@ -486,7 +388,7 @@ ${WHATSAPP_GROUP_LINK}`
                 });
             });
 
-            // Re-apply filter rules if user currently has an active search text query typed
+            // Re-apply filter rules if user currently has an active search query
             const currentSearch = document.getElementById("searchInput").value;
             if (currentSearch.trim() !== "") {
                 filterTable();
