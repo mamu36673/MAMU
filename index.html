@@ -217,12 +217,12 @@
             if (!m) return;
 
             editIdInput.value = String(m.id);
-            document.getElementById("name").value = m.name;
-            document.getElementById("school").value = m.school;
-            document.getElementById("course").value = m.course;
-            document.getElementById("regNo").value = m.regNo;
-            document.getElementById("year").value = m.year;
-            document.getElementById("phone").value = m.phone;
+            document.getElementById("name").value = m.name || '';
+            document.getElementById("school").value = m.school || '';
+            document.getElementById("course").value = m.course || '';
+            document.getElementById("regNo").value = m.regNo || '';
+            document.getElementById("year").value = m.year || 'Year 1';
+            document.getElementById("phone").value = m.phone || '';
 
             formTitle.innerText = "Editing Record";
             submitBtn.innerText = "Update Member";
@@ -234,7 +234,7 @@
 
         function resetFormState() {
             form.reset();
-            editIdInput.value = ""; // Clear hidden ID field to resume "Register Student" mode
+            editIdInput.value = ""; 
             formTitle.innerText = "Register Student";
             submitBtn.innerText = "Save to Cloud";
             cancelBtn.classList.add('hidden');
@@ -248,7 +248,6 @@
             
             let members = JSON.parse(localStorage.getItem("mamu_members")) || [];
 
-            // Duplicate registration check (only for new members)
             if (!editId) {
                 const isDuplicate = members.some(student => 
                     String(student.regNo).trim().toLowerCase() === inputRegNo.toLowerCase()
@@ -260,7 +259,6 @@
                 }
             }
 
-            // Create guaranteed unique ID for new entries
             const uniqueId = editId || (typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : 'id_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9));
 
             const existingMember = editId ? members.find(m => String(m.id) === editId) : null;
@@ -277,7 +275,6 @@
                 createdAt: creationTime
             };
 
-            // Update or Insert
             if (editId) {
                 members = members.map(m => String(m.id) === editId ? memberData : m);
             } else {
@@ -286,7 +283,6 @@
             
             localStorage.setItem("mamu_members", JSON.stringify(members));
 
-            // Transmit Live Update to Google Sheet API
             console.log("Sending to Cloud:", memberData);
             try {
                 const response = await fetch(SCRIPT_URL, {
@@ -318,21 +314,28 @@
         function loadMembers() {
             let members = JSON.parse(localStorage.getItem("mamu_members")) || [];
 
+            // AUTO-REPAIR: Assign unique IDs to old legacy entries missing an 'id'
+            let needsSave = false;
+            members = members.map(m => {
+                if (!m.id) {
+                    needsSave = true;
+                    m.id = typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : 'id_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9);
+                }
+                return m;
+            });
+
+            if (needsSave) {
+                localStorage.setItem("mamu_members", JSON.stringify(members));
+            }
+
             memberList.innerHTML = "";
 
-            const yearGroups = [
-                "Year 1",
-                "Year 2",
-                "Year 3",
-                "Year 4",
-                "Alumni"
-            ];
-
-            const sortedMembers = [...members].sort((a, b) => b.createdAt - a.createdAt);
+            const yearGroups = ["Year 1", "Year 2", "Year 3", "Year 4", "Alumni"];
+            const sortedMembers = [...members].sort((a, b) => (b.createdAt || 0) - (a.createdAt || 0));
 
             yearGroups.forEach(year => {
                 const students = sortedMembers.filter(student => {
-                    const memberYear = String(student.year).trim();
+                    const memberYear = String(student.year || '').trim();
                     return (
                         memberYear === year ||
                         memberYear === year.replace("Year ", "")
@@ -353,26 +356,26 @@
                 `;
 
                 students.forEach(m => {
-                    const waPhone = formatWhatsAppNumber(m.phone);
-                    const messageText = encodeURIComponent(`Assalam Alaykum ${m.name},\n\nWelcome to MAMU.\n\nJoin our WhatsApp group:\n\n${WHATSAPP_GROUP_LINK}`);
+                    const waPhone = formatWhatsAppNumber(m.phone || '');
+                    const messageText = encodeURIComponent(`Assalam Alaykum ${m.name || 'Student'},\n\nWelcome to MAMU.\n\nJoin our WhatsApp group:\n\n${WHATSAPP_GROUP_LINK}`);
                     const waUrl = `https://wa.me/${waPhone}?text=${messageText}`;
 
                     const safeId = String(m.id).replace(/'/g, "\\'");
-                    const safeName = String(m.name).replace(/'/g, "\\'");
-                    const safePhone = String(m.phone).replace(/'/g, "\\'");
-                    const safeYear = String(m.year).replace(/'/g, "\\'");
-                    const safeRegNo = String(m.regNo).replace(/'/g, "\\'");
-                    const safeCourse = String(m.course).replace(/'/g, "\\'");
+                    const safeName = String(m.name || 'Unnamed').replace(/'/g, "\\'");
+                    const safePhone = String(m.phone || '').replace(/'/g, "\\'");
+                    const safeYear = String(m.year || '').replace(/'/g, "\\'");
+                    const safeRegNo = String(m.regNo || '').replace(/'/g, "\\'");
+                    const safeCourse = String(m.course || '').replace(/'/g, "\\'");
 
                     memberList.innerHTML += `
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4">
-                                <div class="font-bold text-emerald-900">${m.name}</div>
-                                <div class="text-[10px] text-gray-400 font-mono uppercase">${m.regNo}</div>
+                                <div class="font-bold text-emerald-900">${m.name || 'Unnamed'}</div>
+                                <div class="text-[10px] text-gray-400 font-mono uppercase">${m.regNo || ''}</div>
                             </td>
                             <td class="px-6 py-4">
-                                <div class="text-xs font-semibold text-gray-500 uppercase">${m.school}</div>
-                                <div class="text-sm text-emerald-600">${m.course}</div>
+                                <div class="text-xs font-semibold text-gray-500 uppercase">${m.school || ''}</div>
+                                <div class="text-sm text-emerald-600">${m.course || ''}</div>
                             </td>
                             <td class="px-6 py-4">
                                 <div class="flex gap-2">
