@@ -212,7 +212,6 @@
 
         window.prepareEdit = (id) => {
             let members = JSON.parse(localStorage.getItem("mamu_members")) || [];
-            // Explicit string conversion comparison prevents lookup failures
             let m = members.find(student => String(student.id) === String(id));
             
             if (!m) return;
@@ -235,7 +234,7 @@
 
         function resetFormState() {
             form.reset();
-            editIdInput.value = ""; // Crucial: clear hidden ID to return to 'Add New' mode
+            editIdInput.value = ""; // Clear hidden ID field to resume "Register Student" mode
             formTitle.innerText = "Register Student";
             submitBtn.innerText = "Save to Cloud";
             cancelBtn.classList.add('hidden');
@@ -245,11 +244,11 @@
             e.preventDefault();
 
             const inputRegNo = document.getElementById("regNo").value.trim();
-            const editId = editIdInput.value ? String(editIdInput.value).trim() : null;
+            const editId = (editIdInput.value && editIdInput.value.trim() !== "") ? String(editIdInput.value).trim() : null;
             
             let members = JSON.parse(localStorage.getItem("mamu_members")) || [];
 
-            // Duplicate registration checks (only when creating a new member)
+            // Duplicate registration check (only for new members)
             if (!editId) {
                 const isDuplicate = members.some(student => 
                     String(student.regNo).trim().toLowerCase() === inputRegNo.toLowerCase()
@@ -261,12 +260,14 @@
                 }
             }
 
-            // Correctly preserve original creation time during an edit
+            // Create guaranteed unique ID for new entries
+            const uniqueId = editId || (typeof crypto.randomUUID === 'function' ? crypto.randomUUID() : 'id_' + Date.now() + '_' + Math.random().toString(36).substring(2, 9));
+
             const existingMember = editId ? members.find(m => String(m.id) === editId) : null;
             const creationTime = existingMember ? existingMember.createdAt : Date.now();
 
             const memberData = {
-                id: editId || ("id_" + Date.now() + "_" + Math.floor(Math.random() * 1000)), // Unique string ID
+                id: uniqueId,
                 name: document.getElementById("name").value.trim(),
                 regNo: inputRegNo,
                 school: document.getElementById("school").value,
@@ -276,15 +277,16 @@
                 createdAt: creationTime
             };
 
-            // 1. Update Local Browser Cache
+            // Update or Insert
             if (editId) {
                 members = members.map(m => String(m.id) === editId ? memberData : m);
             } else {
                 members.push(memberData);
             }
+            
             localStorage.setItem("mamu_members", JSON.stringify(members));
 
-            // 2. Transmit Live Update to Google Sheet API
+            // Transmit Live Update to Google Sheet API
             console.log("Sending to Cloud:", memberData);
             try {
                 const response = await fetch(SCRIPT_URL, {
@@ -326,7 +328,6 @@
                 "Alumni"
             ];
 
-            // Sort so that the newest registrations appear on top inside their respective groups
             const sortedMembers = [...members].sort((a, b) => b.createdAt - a.createdAt);
 
             yearGroups.forEach(year => {
@@ -356,6 +357,7 @@
                     const messageText = encodeURIComponent(`Assalam Alaykum ${m.name},\n\nWelcome to MAMU.\n\nJoin our WhatsApp group:\n\n${WHATSAPP_GROUP_LINK}`);
                     const waUrl = `https://wa.me/${waPhone}?text=${messageText}`;
 
+                    const safeId = String(m.id).replace(/'/g, "\\'");
                     const safeName = String(m.name).replace(/'/g, "\\'");
                     const safePhone = String(m.phone).replace(/'/g, "\\'");
                     const safeYear = String(m.year).replace(/'/g, "\\'");
@@ -385,7 +387,7 @@
                                 </div>
                             </td>
                             <td class="px-6 py-4 text-center">
-                                <button onclick="prepareEdit('${m.id}')"
+                                <button onclick="prepareEdit('${safeId}')"
                                         class="text-[10px] font-black tracking-tight bg-white border border-emerald-200 text-emerald-700 px-3 py-1.5 rounded-lg hover:bg-emerald-600 hover:text-white transition-all shadow-sm">
                                     EDIT
                                 </button>
@@ -395,14 +397,12 @@
                 });
             });
 
-            // Re-apply filter rules if user currently has an active search text query typed
             const currentSearch = document.getElementById("searchInput").value;
             if (currentSearch.trim() !== "") {
                 filterTable();
             }
         }
 
-        // Initialize and load local browser data instantly upon display assembly
         window.onload = loadMembers;
     </script>
 </body>
