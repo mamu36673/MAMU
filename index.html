@@ -4,11 +4,27 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    
+    <!-- Standard Page Title & Search Engine Meta Tags -->
     <title>MAMU | Muslim Association of Meru University</title>
+    <meta property="og:site_name" content="MAMU" />
+    <meta name="description" content="Muslim Association of Meru University (MAMU) Cloud Directory and Student Portal." />
+
+    <!-- Structured Data to fix site name in Google Search Results -->
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "WebSite",
+      "name": "MAMU",
+      "alternateName": "Muslim Association of Meru University",
+      "url": "https://mamu36673.github.io/MamuWeb/"
+    }
+    </script>
+
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
-         :root {
+        :root {
             --islamic-green: #065f46;
             --gold: #fbbf24;
         }
@@ -196,11 +212,12 @@
 
         window.prepareEdit = (id) => {
             let members = JSON.parse(localStorage.getItem("mamu_members")) || [];
+            // Explicit string conversion comparison prevents lookup failures
             let m = members.find(student => String(student.id) === String(id));
             
             if (!m) return;
 
-            editIdInput.value = m.id;
+            editIdInput.value = String(m.id);
             document.getElementById("name").value = m.name;
             document.getElementById("school").value = m.school;
             document.getElementById("course").value = m.course;
@@ -218,7 +235,7 @@
 
         function resetFormState() {
             form.reset();
-            editIdInput.value = "";
+            editIdInput.value = ""; // Crucial: clear hidden ID to return to 'Add New' mode
             formTitle.innerText = "Register Student";
             submitBtn.innerText = "Save to Cloud";
             cancelBtn.classList.add('hidden');
@@ -228,7 +245,7 @@
             e.preventDefault();
 
             const inputRegNo = document.getElementById("regNo").value.trim();
-            const editId = editIdInput.value;
+            const editId = editIdInput.value ? String(editIdInput.value).trim() : null;
             
             let members = JSON.parse(localStorage.getItem("mamu_members")) || [];
 
@@ -244,20 +261,24 @@
                 }
             }
 
+            // Correctly preserve original creation time during an edit
+            const existingMember = editId ? members.find(m => String(m.id) === editId) : null;
+            const creationTime = existingMember ? existingMember.createdAt : Date.now();
+
             const memberData = {
-                id: editId || Date.now().toString(), 
-                name: document.getElementById("name").value,
+                id: editId || ("id_" + Date.now() + "_" + Math.floor(Math.random() * 1000)), // Unique string ID
+                name: document.getElementById("name").value.trim(),
                 regNo: inputRegNo,
                 school: document.getElementById("school").value,
-                course: document.getElementById("course").value,
+                course: document.getElementById("course").value.trim(),
                 year: document.getElementById("year").value,
-                phone: document.getElementById("phone").value,
-                createdAt: editId ? (members.find(m => m.id === editId)?.createdAt || Date.now()) : Date.now()
+                phone: document.getElementById("phone").value.trim(),
+                createdAt: creationTime
             };
 
-            // 1. Instantly Update Local Browser Cache for UI feedback
+            // 1. Update Local Browser Cache
             if (editId) {
-                members = members.map(m => m.id === editId ? memberData : m);
+                members = members.map(m => String(m.id) === editId ? memberData : m);
             } else {
                 members.push(memberData);
             }
@@ -285,7 +306,7 @@
 
             } catch (error) {
                 console.error(error);
-                alert("Saved locally! Unable to reach Google Sheets API right now (data will push on refresh).");
+                alert("Saved locally! Unable to reach Google Sheets API right now.");
             }
 
             resetFormState();
