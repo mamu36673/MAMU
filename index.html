@@ -25,8 +25,8 @@
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;600&display=swap" rel="stylesheet">
     <style>
         :root {
-            --islamic-green: #065f46;
-            --gold: #fbbf24;
+            --islamic-green: #0a4d2e;
+            --gold: #fbc02d;
         }
 
         body {
@@ -35,7 +35,7 @@
         }
 
         .islamic-gradient {
-            background: linear-gradient(135deg, #064e3b 0%, #059669 100%);
+            background: linear-gradient(180deg, #10623a 0%, #063820 100%);
             border-bottom: 5px solid var(--gold);
         }
     </style>
@@ -116,7 +116,7 @@
                         <table class="w-full text-left" id="directoryTable">
                             <thead class="bg-emerald-900 text-white text-xs uppercase">
                                 <tr>
-                                    <th class="px-6 py-4">Student Name</th>
+                                    <th class="px-6 py-4">Student ID / Reg No</th>
                                     <th class="px-6 py-4">Academic Details</th>
                                     <th class="px-6 py-4">Onboarding Actions</th>
                                     <th class="px-6 py-4 text-center">System</th>
@@ -174,8 +174,7 @@
         const editIdInput = document.getElementById("editId");
         const memberList = document.getElementById("memberList");
 
-        // REPLACE THIS WITH YOUR DEPLOYED GOOGLE APPS SCRIPT URL
-        const SCRIPT_URL = "YOUR_APPS_SCRIPT_WEB_APP_URL_HERE"; 
+        const SCRIPT_URL = "https://script.google.com/macros/s/AKfycbzui9iUzmsk76xbEtJ2a8CJYsDWB2erF1uECGeGhWDN8ofMn6RHOCMZTF6FDXv29_-4sA/exec"; 
         const WHATSAPP_GROUP_LINK = "https://chat.whatsapp.com/YOUR_GROUP_INVITE_CODE";
 
         function formatWhatsAppNumber(phoneStr) {
@@ -192,8 +191,8 @@
             const vcardContent = [
                 "BEGIN:VCARD",
                 "VERSION:3.0",
-                `N:;MAMU: ${name} (${year});;;`,
-                `FN:MAMU: ${name} (${year})`,
+                `N:;MAMU Member (${year});;;`,
+                `FN:MAMU Member (${year})`,
                 `TEL;TYPE=CELL:${cleanPhone}`,
                 `NOTE:Reg: ${regNo} | Course: ${course}`,
                 "END:VCARD"
@@ -207,7 +206,7 @@
 
             const link = document.createElement("a");
             link.href = url;
-            link.download = `${name.replace(/\s+/g, "_")}_MAMU.vcf`;
+            link.download = `MAMU_${regNo.replace(/\s+/g, "_")}.vcf`;
             document.body.appendChild(link);
             link.click();
             document.body.removeChild(link);
@@ -360,7 +359,7 @@
 
                 students.forEach(m => {
                     const waPhone = formatWhatsAppNumber(m.phone || '');
-                    const messageText = encodeURIComponent(`Assalam Alaykum ${m.name || 'Student'},\n\nWelcome to MAMU.\n\nJoin our WhatsApp group:\n\n${WHATSAPP_GROUP_LINK}`);
+                    const messageText = encodeURIComponent(`Assalam Alaykum,\n\nWelcome to MAMU.\n\nJoin our WhatsApp group:\n\n${WHATSAPP_GROUP_LINK}`);
                     const waUrl = `https://wa.me/${waPhone}?text=${messageText}`;
 
                     const safeId = String(m.id).replace(/'/g, "\\'");
@@ -373,8 +372,8 @@
                     memberList.innerHTML += `
                         <tr class="hover:bg-gray-50">
                             <td class="px-6 py-4">
-                                <div class="font-bold text-emerald-900">${m.name || 'Unnamed'}</div>
-                                <div class="text-[10px] text-gray-400 font-mono uppercase">${m.regNo || ''}</div>
+                                <div class="font-bold text-emerald-900 font-mono uppercase">${m.regNo || 'NO REG NO'}</div>
+                                <div class="text-[10px] text-gray-400 uppercase">MAMU Member</div>
                             </td>
                             <td class="px-6 py-4">
                                 <div class="text-xs font-semibold text-gray-500 uppercase">${m.school || ''}</div>
